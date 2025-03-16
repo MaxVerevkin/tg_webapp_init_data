@@ -1,3 +1,5 @@
+//! Parse and validate initData for Telegram Mini Apps
+
 use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime};
 
