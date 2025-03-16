@@ -2,9 +2,13 @@
 name = "tg_webapp_init_data"
 version = "0.1.0"
 edition = "2024"
+description = "Parse and validate initData for Telegram Mini Apps"
+repository = "https://github.com/MaxVerevkin/tg_webapp_init_data"
+license = "MIT"
+authors = ["MaxVerevkin <maxxverrr@gmail.com>"]
 
 [dependencies]
-form_urlencoded = "1.2.1"
-hmac-sha256 = "1.1.8"
-serde = { version = "1.0.216", features = ["derive"] }
-serde_json = "1.0.134"
+form_urlencoded = "1.2"
+hmac-sha256 = "1.1"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
