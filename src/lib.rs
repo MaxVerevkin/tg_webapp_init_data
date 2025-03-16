@@ -3,6 +3,13 @@ use std::time::{Duration, SystemTime};
 
 use serde::Deserialize;
 
+pub enum Error {
+    InvalidHash,
+    MissingField(&'static str),
+    InvalidJson(&'static str, serde_json::Error),
+    InvalidNumericField(&'static str),
+}
+
 #[derive(Debug)]
 pub struct WebAppInitData {
     // query_id: Option<String>,
@@ -34,9 +41,9 @@ pub struct WebAppUser {
 }
 
 impl WebAppInitData {
-    pub fn new(token: &str, raw: &[u8]) -> Option<Self> {
+    pub fn new(token: &str, raw: &[u8]) -> Result<Self, Error> {
         let mut decoded: BTreeMap<_, _> = form_urlencoded::parse(raw).collect();
-        let hash = decoded.remove("hash")?;
+        let hash = decoded.remove("hash").ok_or(Error::MissingField("hash"))?;
 
         let mut data_check_string = String::new();
         for (k, v) in &decoded {
@@ -51,27 +58,25 @@ impl WebAppInitData {
         let secret_key = hmac_sha256::HMAC::mac(token, "WebAppData");
         let actual_hash = hmac_sha256::HMAC::mac(&data_check_string, secret_key);
         if hex(&actual_hash) != *hash {
-            return None;
+            return Err(Error::InvalidHash);
         }
 
-        Some(WebAppInitData {
+        Ok(WebAppInitData {
             user: decoded
                 .remove("user")
-                .and_then(|x| serde_json::from_str(&x).ok())?,
+                .map(|x| serde_json::from_str(&x))
+                .transpose()
+                .map_err(|e| Error::InvalidJson("user", e))?,
             receiver: decoded
                 .remove("receiver")
-                .and_then(|x| serde_json::from_str(&x).ok())?,
-            auth_date: decoded.remove("auth_date")?.parse().ok()?,
-            // query_id: map.remove("query_id"),
-            // chat: map.remove("chat"),
-            // chat_type: map.remove("chat_type"),
-            // chat_instance: map.remove("chat_instance"),
-            // start_param: map.remove("start_param"),
-            // can_send_after: map
-            //     .remove("can_send_after")
-            //     .map(|x| x.parse())
-            //     .transpose()
-            //     .ok()?,
+                .map(|x| serde_json::from_str(&x))
+                .transpose()
+                .map_err(|e| Error::InvalidJson("receiver", e))?,
+            auth_date: decoded
+                .remove("auth_date")
+                .ok_or(Error::MissingField("auth_date"))?
+                .parse()
+                .map_err(|_e| Error::InvalidNumericField("auth_date"))?,
         })
     }
 
